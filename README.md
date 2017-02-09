@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/taggiasco/akka-http-sample.svg?branch=master)](https://travis-ci.org/taggiasco/akka-http-sample)
+[![Build Status](https://travis-ci.org/taggiasco/akka-streams-logreader.svg?branch=master)](https://travis-ci.org/taggiasco/akka-streams-logreader)
 
 # Akka Streams sample
 
