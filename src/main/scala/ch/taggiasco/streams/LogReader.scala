@@ -35,18 +35,14 @@ object LogReader {
       // parse chunks of bytes into lines
       via(Framing.delimiter(ByteString(System.lineSeparator), maximumFrameLength = 512, allowTruncation = true)).
       map(_.utf8String).
-      map {
+      collect {
         case line @ LogPattern(date, httpMethod, url, timing, status) =>
-          Some(LogEntry(date, httpMethod, url, Integer.parseInt(timing), Integer.parseInt(status), line))
-        case line @ other =>
-          None
+          LogEntry(date, httpMethod, url, Integer.parseInt(timing), Integer.parseInt(status), line)
       }.
-      filter(_.isDefined).
-      map(_.get).
       // group them by log level
       groupBy(levels.size + 1, groupCreator).
       fold((0, List.empty[LogEntry])) {
-        case ((_, list), logEntry) => (groupCreator(logEntry), logEntry :: list) // (level, line :: list)
+        case ((_, list), logEntry) => (groupCreator(logEntry), logEntry :: list)
       }.
       // write lines of each group to a separate file
       mapAsync(parallelism = levels.size + 1) {
