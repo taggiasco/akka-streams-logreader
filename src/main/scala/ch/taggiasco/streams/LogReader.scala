@@ -8,6 +8,7 @@ import akka.stream.scaladsl._
 import akka.util.ByteString
 
 import scala.util.{Try, Failure, Success}
+import akka.NotUsed
 
 
 object LogReader {
@@ -58,5 +59,35 @@ object LogReader {
           println(s"Failure: ${e.getMessage}")
           system.terminate()
       })
+    
+    
+    
+    
+    val source =
+      FileIO.fromPath(logFile).
+      via(Framing.delimiter(ByteString(System.lineSeparator), maximumFrameLength = 512, allowTruncation = true)).
+      map(_.utf8String).
+      collect {
+        case line @ LogPattern(date, httpMethod, url, timing, status) =>
+          LogEntry(date, httpMethod, url, Integer.parseInt(timing), Integer.parseInt(status), line)
+      }
+    
+    
+    def reduceByKey[In, K, Out](
+      maximumGroupSize: Int,
+      groupKey:         (In) => K,
+      map:              (In) => Out
+    )(reduce: (Out, Out) => Out): Flow[In, (K, Out), NotUsed] = {
+      Flow[In]
+        .groupBy[K](maximumGroupSize, groupKey)
+        .map(e => groupKey(e) -> map(e))
+        .reduce((l, r) => l._1 -> reduce(l._2, r._2))
+        .mergeSubstreams
+    }
+    
+    
+    
+    
+    
   }
 }
