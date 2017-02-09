@@ -8,4 +8,4 @@ This project is a simple example of Akka Streams usage. It only allows to read a
 
 ## Usage
 
-$ sbt run
+$ sbt run sample.log 400-800
