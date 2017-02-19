@@ -1,16 +1,18 @@
 package ch.taggiasco.streams
 
+import scala.util.matching.Regex
+
 
 object Reducer {
   
-  val httpMethodReducer: LogEntry => Particularity = logEntry => {
+  val httpMethod: LogEntry => Particularity = logEntry => {
     Particularity(logEntry.httpMethod)
   }
   
   private val SimpleURL = "(.+)\\?(.*)".r
   private val FullURL   = "(.+)".r
   
-  val urlReducer: LogEntry => Particularity = logEntry => {
+  val pathOnly: LogEntry => Particularity = logEntry => {
     Particularity(
       logEntry.url match {
         case SimpleURL(path, queryString) => path
@@ -18,5 +20,6 @@ object Reducer {
       }
     )
   }
+  
   
 }

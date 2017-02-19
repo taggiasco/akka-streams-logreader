@@ -51,6 +51,8 @@ object LogReader {
       Flow[LogEntry].map(logEntry => (f(logEntry), logEntry))
     }
     
+    def filterFlow(f: LogEntry => Boolean): Flow[LogEntry, LogEntry, NotUsed] = Flow[LogEntry].filter(f)
+    
     
     val sumSink: Sink[(Particularity, LogEntry), Future[Map[Particularity, Int]]] = {
       Sink.fold(Map.empty[Particularity, Int])(
@@ -79,10 +81,10 @@ object LogReader {
     
     
     // graph : count number of requests for each http method
-    val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.httpMethodReducer)).runWith(sumSink)
+    val graph = source.via(logEntryFlow).via(filterFlow(Filter.useless)).via(reduceFlow(Reducer.httpMethod)).runWith(sumSink)
     
     // graph : average response time for each url
-    //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.urlReducer)).runWith(avgSink)
+    //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.pathOnly)).runWith(avgSink)
     
     graph.onComplete {
       case Success(results) =>
