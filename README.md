@@ -2,10 +2,10 @@
 
 # Akka Streams sample
 
-This project is a simple example of Akka Streams usage. It only allows to read a log file.
+This project is a simple example of Akka Streams usage. It allows to read log files, apply a "reducer" function (i.e. split logs in different groups), and then apply a specific sink (sum or average).
 
 
 
 ## Usage
 
-$ sbt run sample.log 400-800
+$ sbt run sample.log sample_post.log

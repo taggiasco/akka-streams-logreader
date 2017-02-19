@@ -24,13 +24,19 @@ object LogReader {
     val LogPattern = """(.*) Timing: ([A-Z]+) (.+) took ([0-9]+)ms and returned ([0-9]+)""".r
     
     // read lines from a log file
-    val logFile = Paths.get("src/main/resources/" + args(0))
+    if(args.isEmpty) {
+      println("You must add filenames as arguments")
+      system.terminate()
+    }
+    val logFiles = args.map(arg => Paths.get("src/main/resources/" + arg))
     
-    
-    val source: Source[String, Future[IOResult]] =
+    val sources: Array[Source[String, Future[IOResult]]] = logFiles.map(logFile => {
       FileIO.fromPath(logFile).
       via(Framing.delimiter(ByteString(System.lineSeparator), maximumFrameLength = 512, allowTruncation = true)).
       map(_.utf8String)
+    })
+    
+    val source = sources.foldLeft(Source.empty[String])((acc, current) => Source.combine(acc, current)(Merge(_)) )
     
     
     val logEntryFlow: Flow[String, (LogEntry), NotUsed] = {
