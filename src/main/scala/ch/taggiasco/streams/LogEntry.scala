@@ -8,7 +8,3 @@ case class LogEntry(
   status:     Int,
   line:       String
 )
-
-case class Particularity(
-  label: String
-)
