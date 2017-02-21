@@ -32,7 +32,7 @@ object LogReader {
     
     val sources: Array[Source[String, Future[IOResult]]] = logFiles.map(logFile => {
       FileIO.fromPath(logFile).
-      via(Framing.delimiter(ByteString(System.lineSeparator), maximumFrameLength = 512, allowTruncation = true)).
+      via(Framing.delimiter(ByteString(System.lineSeparator), maximumFrameLength = 100000, allowTruncation = true)).
       map(_.utf8String)
     })
     
@@ -81,16 +81,23 @@ object LogReader {
     
     
     // graph : count number of requests for each http method
-    val graph = source.via(logEntryFlow).via(filterFlow(Filter.useless)).via(reduceFlow(Reducer.httpMethod)).runWith(sumSink)
+    //val graph = source.via(logEntryFlow).via(filterFlow(Filter.useless)).via(reduceFlow(Reducer.httpMethod)).runWith(sumSink)
     
     // graph : average response time for each url
     //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.pathOnly)).runWith(avgSink)
     
+    // graph : count number of requests per day/hour
+    //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.dateHour)).runWith(sumSink)
+    
+    // graph : number of request for each status
+    val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.status)).runWith(sumSink)
+    
     graph.onComplete {
       case Success(results) =>
         println("Results:")
-        results.foreach(result => {
-          val (particularity, value) = result
+        val sortedKeys = results.keys.toList.sortBy(_.label)
+        sortedKeys.foreach(particularity => {
+          val value = results(particularity)
           println(s"${particularity.label} : $value")
         })
         system.terminate()

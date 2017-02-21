@@ -9,9 +9,11 @@ object Reducer {
     IdentityParticularity()
   }
   
-  val httpMethod: LogEntry => Particularity = logEntry => {
-    SingleParticularity(logEntry.httpMethod)
-  }
+  
+  val httpMethod: LogEntry => Particularity = logEntry => SingleParticularity(logEntry.httpMethod)
+  
+  
+  val status: LogEntry => Particularity = logEntry => SingleParticularity(logEntry.status.toString())
   
   
   private val SimpleURL = "(.+)\\?(.*)".r
@@ -28,7 +30,8 @@ object Reducer {
   
   
   val dateHour: LogEntry => Particularity = logEntry => {
-    DualParticularity("", "")
+    val datas = logEntry.date.split(" ").toList
+    DualParticularity(datas(0), datas(1).split(":").head)
   }
   
   
