@@ -1,6 +1,7 @@
 package ch.taggiasco.streams
 
 import java.nio.file.Paths
+import java.io.File
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -21,14 +22,15 @@ object LogReader {
     implicit val materializer = ActorMaterializer()
     implicit val executionContext = materializer.executionContext
     
-    val LogPattern = """(.*) Timing: ([A-Z]+) (.+) took ([0-9]+)ms and returned ([0-9]+)""".r
-    
-    // read lines from a log file
-    if(args.isEmpty) {
-      println("You must add filenames as arguments")
-      system.terminate()
+    // read lines from log files
+    val logFiles = {
+      if(args.isEmpty) {
+        val rep = new File("src/main/resources")
+        rep.list().map( fname => Paths.get("src/main/resources/" + fname) )
+      } else {
+        args.map(arg => Paths.get("src/main/resources/" + arg))
+      }
     }
-    val logFiles = args.map(arg => Paths.get("src/main/resources/" + arg))
     
     val sources: Array[Source[String, Future[IOResult]]] = logFiles.map(logFile => {
       FileIO.fromPath(logFile).
@@ -39,14 +41,6 @@ object LogReader {
     val source = sources.foldLeft(Source.empty[String])((acc, current) => Source.combine(acc, current)(Merge(_)) )
     
     
-    val logEntryFlow: Flow[String, (LogEntry), NotUsed] = {
-      Flow[String].collect {
-        case line @ LogPattern(date, httpMethod, url, timing, status) =>
-          LogEntry(date, httpMethod, url, Integer.parseInt(timing), Integer.parseInt(status), line)
-      }
-    }
-    
-    
     def reduceFlow(f: LogEntry => Particularity): Flow[LogEntry, (Particularity, LogEntry), NotUsed] = {
       Flow[LogEntry].map(logEntry => (f(logEntry), logEntry))
     }
@@ -54,43 +48,18 @@ object LogReader {
     def filterFlow(f: LogEntry => Boolean): Flow[LogEntry, LogEntry, NotUsed] = Flow[LogEntry].filter(f)
     
     
-    val sumSink: Sink[(Particularity, LogEntry), Future[Map[Particularity, Int]]] = {
-      Sink.fold(Map.empty[Particularity, Int])(
-        (acc: Map[Particularity, Int], dataLogEntry: (Particularity, LogEntry)) => {
-          val (data, logEntry) = dataLogEntry
-          val current = acc.get(data).getOrElse(0)
-          acc + ((data, current + 1))
-        }
-      )
-    }
-    
-    val avgSink: Sink[(Particularity, LogEntry), Future[Map[Particularity, Int]]] = {
-      val sink = Sink.fold(Map.empty[Particularity, (Int, Int)])(
-        (acc: Map[Particularity, (Int, Int)], dataLogEntry: (Particularity, LogEntry)) => {
-          val (data, logEntry) = dataLogEntry
-          val (current, value) = acc.get(data).getOrElse((0, 0))
-          acc + ((data, (current + 1, value + logEntry.timing)))
-        }
-      )
-      sink.mapMaterializedValue(
-        (value: Future[Map[Particularity, (Int, Int)]]) => {
-          value.map(vs => vs.map(v => v._1 -> v._2._2 / v._2._1))
-        }
-      )
-    }
-    
     
     // graph : count number of requests for each http method
-    //val graph = source.via(logEntryFlow).via(filterFlow(Filter.useless)).via(reduceFlow(Reducer.httpMethod)).runWith(sumSink)
+    //val graph = source.via(logEntryFlow).via(filterFlow(Filter.useless)).via(reduceFlow(Reducer.httpMethod)).runWith(Statistic.sumSink)
     
     // graph : average response time for each url
-    //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.pathOnly)).runWith(avgSink)
+    //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.pathOnly)).runWith(Statistic.avgSink())
     
     // graph : count number of requests per day/hour
-    //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.dateHour)).runWith(sumSink)
+    //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.sumSink)
     
     // graph : number of request for each status
-    val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.status)).runWith(sumSink)
+    val graph = source.via(LogEntry.flow).via(reduceFlow(Reducer.status)).runWith(Statistic.sumSink)
     
     graph.onComplete {
       case Success(results) =>
