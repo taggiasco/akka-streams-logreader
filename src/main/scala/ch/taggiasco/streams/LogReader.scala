@@ -23,22 +23,13 @@ object LogReader {
     implicit val executionContext = materializer.executionContext
     
     // read lines from log files
-    val logFiles = {
+    val source = {
       if(args.isEmpty) {
-        val rep = new File("src/main/resources")
-        rep.list().map( fname => Paths.get("src/main/resources/" + fname) )
+        LogFile.fromFolder("src/main/resources")
       } else {
-        args.map(arg => Paths.get("src/main/resources/" + arg))
+        LogFile.fromFile(args(0))
       }
     }
-    
-    val sources: Array[Source[String, Future[IOResult]]] = logFiles.map(logFile => {
-      FileIO.fromPath(logFile).
-      via(Framing.delimiter(ByteString(System.lineSeparator), maximumFrameLength = 10000, allowTruncation = true)).
-      map(_.utf8String)
-    })
-    
-    val source = sources.foldLeft(Source.empty[String])((acc, current) => Source.combine(acc, current)(Merge(_)) )
     
     
     def reduceFlow(f: LogEntry => Particularity): Flow[LogEntry, (Particularity, LogEntry), NotUsed] = {
