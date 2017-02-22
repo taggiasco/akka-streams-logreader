@@ -34,7 +34,7 @@ object LogReader {
     
     val sources: Array[Source[String, Future[IOResult]]] = logFiles.map(logFile => {
       FileIO.fromPath(logFile).
-      via(Framing.delimiter(ByteString(System.lineSeparator), maximumFrameLength = 100000, allowTruncation = true)).
+      via(Framing.delimiter(ByteString(System.lineSeparator), maximumFrameLength = 10000, allowTruncation = true)).
       map(_.utf8String)
     })
     
@@ -50,16 +50,24 @@ object LogReader {
     
     
     // graph : count number of requests for each http method
-    //val graph = source.via(logEntryFlow).via(filterFlow(Filter.useless)).via(reduceFlow(Reducer.httpMethod)).runWith(Statistic.sumSink)
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.useless)).via(reduceFlow(Reducer.httpMethod)).runWith(Statistic.sumSink)
     
     // graph : average response time for each url
-    //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.pathOnly)).runWith(Statistic.avgSink())
+    //val graph = source.via(LogEntry.flow).via(reduceFlow(Reducer.pathOnly)).runWith(Statistic.avgSink())
     
     // graph : count number of requests per day/hour
-    //val graph = source.via(logEntryFlow).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.sumSink)
+    //val graph = source.via(LogEntry.flow).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.sumSink)
     
     // graph : number of request for each status
-    val graph = source.via(LogEntry.flow).via(reduceFlow(Reducer.status)).runWith(Statistic.sumSink)
+    //val graph = source.via(LogEntry.flow).via(reduceFlow(Reducer.status)).runWith(Statistic.sumSink)
+    
+    // graphs for services
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.status)).runWith(Statistic.sumSink)
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.sumSink)
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.avgSink)
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.percentile(95))
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.worseSink)
+    val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.nWorsesSink(5))
     
     graph.onComplete {
       case Success(results) =>
@@ -67,7 +75,7 @@ object LogReader {
         val sortedKeys = results.keys.toList.sortBy(_.label)
         sortedKeys.foreach(particularity => {
           val value = results(particularity)
-          println(s"${particularity.label} : $value")
+          println(s"${particularity.label} : ${value.sorted.mkString(", ")}")
         })
         system.terminate()
       case Failure(e) =>

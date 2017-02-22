@@ -10,10 +10,7 @@ object Filter {
   }
   
   def pathPattern(pattern: Regex): LogEntry => Boolean = logEntry => {
-    logEntry.url match {
-      case pattern() => true
-      case _ => false
-    }
+    pattern.findFirstIn(logEntry.url).isDefined
   }
   
   val useless: LogEntry => Boolean = logEntry => true
