@@ -66,7 +66,6 @@ object Statistic {
   private def percentile(values: List[Int], index: Int): Int = {
     val sortedValues = values.sorted
     val pos = Math.ceil( (sortedValues.length - 1) * (index / 100.0)).toInt
-    println("count : " + values.length)
     sortedValues(pos)
   }
   
