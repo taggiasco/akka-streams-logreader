@@ -5,6 +5,9 @@ import scala.util.matching.Regex
 
 object Reducer {
   
+  private val NOT_PERTINENT = "not pertinent"
+  
+  
   val identity: LogEntry => Particularity = logEntry => {
     IdentityParticularity()
   }
@@ -26,6 +29,40 @@ object Reducer {
         case FullURL(path) => path
       }
     )
+  }
+  
+  
+  val directPathOnly: LogEntry => Particularity = logEntry => {
+    val index = logEntry.url.indexOf("?")
+    if(index < 0) {
+      SingleParticularity(logEntry.url)
+    } else {
+      SingleParticularity(logEntry.url.substring(0, index))
+    }
+  }
+  
+  
+  private def extractPathAndArgument(logEntry: LogEntry, argument: String): String = {
+    logEntry.url match {
+      case SimpleURL(path, queryString) =>
+        queryString.toUpperCase().split("&").find(s => s.startsWith(argument.toUpperCase())) match {
+          case Some(argElement) =>
+            path + " / " + argElement.toLowerCase()
+          case None =>
+            NOT_PERTINENT
+        }
+      case FullURL(path) => NOT_PERTINENT
+    }
+  }
+  
+  
+  def byArgument(argument: String): LogEntry => Particularity = logEntry => {
+    SingleParticularity(extractPathAndArgument(logEntry, argument))
+  }
+  
+  
+  def statusAndByArgument(argument: String): LogEntry => Particularity = logEntry => {
+    SingleParticularity(extractPathAndArgument(logEntry, argument) + " / " + logEntry.status.toString())
   }
   
   

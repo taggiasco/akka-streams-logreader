@@ -58,7 +58,28 @@ object LogReader {
     //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.avgSink)
     //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.percentile(95))
     //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.worseSink)
-    val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.nWorsesSink(5))
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("\\Sservice/horaires\\S".r))).via(reduceFlow(Reducer.dateHour)).runWith(Statistic.nWorsesSink(5))
+
+
+    // graphs for portals
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("null".r))).via(reduceFlow(Reducer.status)).runWith(Statistic.sumSink)
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("sso".r))).via(reduceFlow(Reducer.status)).runWith(Statistic.sumSink)
+    val graph = source.via(LogEntry.flow).via(reduceFlow(Reducer.directPathOnly)).runWith(Statistic.sumSink)
+
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("PORTAL".r))).via(reduceFlow(Reducer.pathOnly)).runWith(Statistic.sumSink)
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("PORTAL".r))).via(reduceFlow(Reducer.pathOnly)).runWith(Statistic.avgSink)
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("PORTAL".r))).via(reduceFlow(Reducer.pathOnly)).runWith(Statistic.nWorsesSink(10))
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("PORTAL".r))).via(reduceFlow(Reducer.pathOnly)).runWith(Statistic.percentile(95))
+
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("!PORTAL".r))).via(reduceFlow(Reducer.byArgument("ww_k_cell"))).runWith(Statistic.sumSink)
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("!PORTAL".r))).via(reduceFlow(Reducer.byArgument("ww_k_cell"))).runWith(Statistic.avgSink)
+
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("!PORTAL".r))).via(reduceFlow(Reducer.statusAndByArgument("ww_k_cell"))).runWith(Statistic.sumSink)
+
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("PORTAL".r))).via(reduceFlow(Reducer.status)).runWith(Statistic.sumSink)
+    //val graph = source.via(LogEntry.flow).via(filterFlow(Filter.pathPattern("PORTAL".r))).via(reduceFlow(Reducer.status)).runWith(Statistic.avgSink)
+
+//    val graph = source.via(LogEntry.flow).via(filterFlow(Filter.useless)).via(reduceFlow(Reducer.pathOnly)).runWith(Statistic.avgSink())
     
     graph.onComplete {
       case Success(results) =>
@@ -66,7 +87,8 @@ object LogReader {
         val sortedKeys = results.keys.toList.sortBy(_.label)
         sortedKeys.foreach(particularity => {
           val value = results(particularity)
-          println(s"${particularity.label} : ${value.sorted.mkString(", ")}")
+          println(s"${particularity.label} : ${value}")
+          //println(s"${particularity.label} : ${value.sorted.mkString(", ")}")
         })
         system.terminate()
       case Failure(e) =>
